@@ -4,6 +4,12 @@ Portal y marca del ecosistema FusionStructure. El portal contiene catálogo,
 landing, brandbook y tooling visual; los productos 2D y 3D se abren por enlaces
 de aplicación y no se importan dentro de esta build.
 
+## Publicación
+
+El portal se publica en https://klkmoraa.github.io/fusionstructure-web/ y el
+botón **Solver 2D** abre la aplicación independiente en
+https://klkmoraa.github.io/fstructure/.
+
 ## Estado
 
 `Experimental`: los estados Disponible, Experimental y Planeado del catálogo
