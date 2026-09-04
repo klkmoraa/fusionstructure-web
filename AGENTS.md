@@ -47,6 +47,18 @@ El producto se organiza alrededor de un proyecto común. Las futuras superficies
 
 Una feature nueva debe declarar qué entidad del proyecto modifica, qué validaciones necesita, cómo se deshace, cómo se guarda, cómo se exporta y cómo se prueba.
 
+## Foundation local de Web
+
+- `src/foundation/` pertenece sólo a este portal Web. El código de producción de
+  esa carpeta contiene únicamente identificadores de producto y URLs públicas
+  de aplicaciones.
+- No importar `@fusionstructure/foundation` ni paquetes o rutas internas de
+  productos hermanos. La navegación entre productos usa enlaces públicos, no
+  código de 2D, 3D, unidades, álgebra lineal, modelos, workers o stores.
+- Un cambio a Foundation local requiere únicamente pruebas de Web y un PR de
+  Web. Ejecutar `npm run check` en este repositorio; no abrir ni exigir pruebas
+  o PRs de productos hermanos para ese cambio local.
+
 ## Trabajo experimental
 
 - Diferenciar siempre `Disponible`, `Experimental`, `Planeado` y `No comprometido`.
