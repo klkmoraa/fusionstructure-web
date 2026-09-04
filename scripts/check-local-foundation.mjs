@@ -21,6 +21,9 @@ const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx']);
 const TEST_SOURCE_PATTERN = /\.(?:test|spec)\.(?:ts|tsx)$/;
 const FOUNDATION_PATH_PATTERN = /(?:^|\/)\.\.\/(?:foundation|fusionstructure-foundation)(?:\/|$)/i;
 const SIBLING_PRODUCT_PATH_PATTERN = /(?:^|\/)\.\.\/(?:fstructure|fusionstructure-space3d|space3d)(?:\/|$)/i;
+const ABSOLUTE_LOCAL_PATH_PATTERN = /^(?:[a-z]:\/|\/)/i;
+const FOUNDATION_DIRECTORY_PATTERN = /(?:^|\/)(?:foundation|fusionstructure-foundation)(?:\/|$)/i;
+const PRODUCT_DIRECTORY_PATTERN = /(?:^|\/)(?:fstructure|space3d|fusionstructure-space3d|fusionstructure-web|web)(?:\/|$)/i;
 const SCOPED_PRODUCT_PACKAGE_PATTERN = /@fusionstructure\/[a-z0-9._/-]+/gi;
 const NPM_ALIAS_PATTERN = /^npm:(@[^/@\s]+\/[^/@\s]+|[^@/\s]+)(?:@.*)?$/;
 const SPECIFIER_PATTERNS = [
@@ -62,6 +65,13 @@ const extractNpmAliasTarget = (value) => value.match(NPM_ALIAS_PATTERN)?.[1];
 const matchesPackage = (value, packageNames) => (
   [...packageNames].some((packageName) => value === packageName || value.startsWith(`${packageName}/`))
 );
+
+const forbiddenAbsoluteLocalPathReason = (value) => {
+  if (!ABSOLUTE_LOCAL_PATH_PATTERN.test(value)) return undefined;
+  if (FOUNDATION_DIRECTORY_PATTERN.test(value)) return 'uses archived Foundation';
+  if (PRODUCT_DIRECTORY_PATTERN.test(value)) return 'uses a sibling product dependency';
+  return undefined;
+};
 
 const extractModuleSpecifiers = (source) => {
   const specifiers = new Set();
@@ -109,6 +119,8 @@ const forbiddenDependencyReason = (dependencyName, dependencyValue) => {
       if (targetReason) return 'uses a sibling product dependency';
     }
     const localTarget = normalizePath(dependencyValue).replace(/^(?:file|link|workspace):/, '');
+    const absolutePathReason = forbiddenAbsoluteLocalPathReason(localTarget);
+    if (absolutePathReason) return absolutePathReason;
     if (FOUNDATION_PATH_PATTERN.test(localTarget)) return 'uses archived Foundation';
     if (SIBLING_PRODUCT_PATH_PATTERN.test(localTarget)) return 'uses a sibling product dependency';
   }

@@ -121,6 +121,26 @@ describe('local Foundation boundary gate', () => {
   });
 
   it.each([
+    ['file:C:\\review\\foundation', 'archived Foundation'],
+    ['file:C:\\review\\fusionstructure-foundation\\src', 'archived Foundation'],
+    ['file:C:\\review\\fstructure', 'sibling product dependency'],
+    ['file:C:\\review\\space3d\\src', 'sibling product dependency'],
+    ['file:C:\\review\\fusionstructure-space3d', 'sibling product dependency'],
+    ['file:C:\\review\\fusionstructure-web\\src', 'sibling product dependency'],
+    ['file:C:\\review\\web', 'sibling product dependency'],
+    ['file:/opt/fusionstructure-foundation', 'archived Foundation'],
+    ['/opt/fusionstructure-foundation', 'archived Foundation'],
+  ])('rejects absolute aliases that contain a local product directory', (target, reason) => {
+    const root = createFixture({ 'absolute-local-product-alias': target });
+    writeSource(root, 'App.tsx', 'export {};');
+
+    const result = runGate(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(reason);
+  });
+
+  it.each([
     ['foundation', 'archived Foundation'],
     ['fusionstructure-foundation', 'archived Foundation'],
     ['fstructure', 'sibling product dependency'],
