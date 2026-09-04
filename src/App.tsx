@@ -1,6 +1,6 @@
 import './styles.css';
 import { FusionLanding } from './features/welcome/FusionLanding';
-import { PRODUCT_LINKS } from './productLinks';
+import { PRODUCT_LINKS } from './foundation/productLinks';
 
 const openProduct = (url: string): void => {
   window.location.assign(url);
