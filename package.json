@@ -1,7 +1,7 @@
 {
   "name": "@fusionstructure/web",
   "private": false,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Portal público y sistema de marca de FusionStructure.",
   "type": "module",
   "scripts": {
