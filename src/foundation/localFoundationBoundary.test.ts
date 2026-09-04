@@ -102,4 +102,62 @@ describe('local Foundation boundary gate', () => {
     expect(result.output).toContain(reason);
     expect(result.output).toContain(`${section}.${alias}`);
   });
+
+  it.each([
+    ['file', 'file:../foundation'],
+    ['file', 'file:../fusionstructure-foundation'],
+    ['link', 'link:../foundation'],
+    ['link', 'link:../fusionstructure-foundation'],
+    ['workspace', 'workspace:../foundation'],
+    ['workspace', 'workspace:../fusionstructure-foundation'],
+  ])('rejects %s aliases that resolve to local Foundation paths', (_protocol, target) => {
+    const root = createFixture({ 'local-foundation-alias': target });
+    writeSource(root, 'App.tsx', 'export {};');
+
+    const result = runGate(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('archived Foundation');
+  });
+
+  it.each([
+    ['foundation', 'archived Foundation'],
+    ['fusionstructure-foundation', 'archived Foundation'],
+    ['fstructure', 'sibling product dependency'],
+    ['space3d', 'sibling product dependency'],
+    ['fusionstructure-space3d', 'sibling product dependency'],
+  ])('rejects npm aliases that target the unscoped local product %s', (targetPackage, reason) => {
+    const root = createFixture({ 'local-product-alias': `npm:${targetPackage}@1.0.0` });
+    writeSource(root, 'App.tsx', 'export {};');
+
+    const result = runGate(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(reason);
+  });
+
+  it('allows an npm alias that targets Web\'s unscoped package identity', () => {
+    const root = createFixture({ 'web-alias': 'npm:fusionstructure-web@1.0.0' });
+    writeSource(root, 'App.tsx', 'export {};');
+
+    expect(runGate(root).status).toBe(0);
+  });
+
+  it.each([
+    ['bundleDependencies', ['fusionstructure-foundation'], 'archived Foundation'],
+    ['bundledDependencies', ['fstructure'], 'sibling product dependency'],
+  ])('rejects local product names in %s', (section, values, reason) => {
+    const root = createFixture();
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'fixture-web', [section]: values }, null, 2),
+    );
+    writeSource(root, 'App.tsx', 'export {};');
+
+    const result = runGate(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(reason);
+    expect(result.output).toContain(section);
+  });
 });

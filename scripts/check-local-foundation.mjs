@@ -2,8 +2,12 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ARCHIVED_FOUNDATION_PACKAGE = '@fusionstructure/foundation';
-const WEB_PACKAGE = '@fusionstructure/web';
+const ARCHIVED_FOUNDATION_PACKAGES = new Set([
+  '@fusionstructure/foundation',
+  'foundation',
+  'fusionstructure-foundation',
+]);
+const WEB_PACKAGES = new Set(['@fusionstructure/web', 'fusionstructure-web']);
 const PRODUCT_SCOPE = '@fusionstructure/';
 const SIBLING_PRODUCT_PACKAGES = new Set(['fstructure', 'fusionstructure-space3d', 'space3d']);
 const DEPENDENCY_SECTIONS = [
@@ -12,10 +16,13 @@ const DEPENDENCY_SECTIONS = [
   'optionalDependencies',
   'peerDependencies',
 ];
+const BUNDLED_DEPENDENCY_SECTIONS = ['bundleDependencies', 'bundledDependencies'];
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx']);
 const TEST_SOURCE_PATTERN = /\.(?:test|spec)\.(?:ts|tsx)$/;
+const FOUNDATION_PATH_PATTERN = /(?:^|\/)\.\.\/(?:foundation|fusionstructure-foundation)(?:\/|$)/i;
 const SIBLING_PRODUCT_PATH_PATTERN = /(?:^|\/)\.\.\/(?:fstructure|fusionstructure-space3d|space3d)(?:\/|$)/i;
 const SCOPED_PRODUCT_PACKAGE_PATTERN = /@fusionstructure\/[a-z0-9._/-]+/gi;
+const NPM_ALIAS_PATTERN = /^npm:(@[^/@\s]+\/[^/@\s]+|[^@/\s]+)(?:@.*)?$/;
 const SPECIFIER_PATTERNS = [
   /\bfrom\s*['"]([^'"]+)['"]/g,
   /\bimport\s*['"]([^'"]+)['"]/g,
@@ -50,6 +57,12 @@ const extractScopedProductPackages = (value) => (
   [...value.matchAll(SCOPED_PRODUCT_PACKAGE_PATTERN)].map((match) => match[0])
 );
 
+const extractNpmAliasTarget = (value) => value.match(NPM_ALIAS_PATTERN)?.[1];
+
+const matchesPackage = (value, packageNames) => (
+  [...packageNames].some((packageName) => value === packageName || value.startsWith(`${packageName}/`))
+);
+
 const extractModuleSpecifiers = (source) => {
   const specifiers = new Set();
   for (const pattern of SPECIFIER_PATTERNS) {
@@ -66,11 +79,11 @@ const extractModuleSpecifiers = (source) => {
 
 const forbiddenSpecifierReason = (specifier) => {
   const normalized = normalizePath(specifier);
-  if (normalized === ARCHIVED_FOUNDATION_PACKAGE || normalized.startsWith(`${ARCHIVED_FOUNDATION_PACKAGE}/`)) {
+  if (matchesPackage(normalized, ARCHIVED_FOUNDATION_PACKAGES)) {
     return 'imports archived Foundation';
   }
   if (
-    (normalized.startsWith(PRODUCT_SCOPE) && !normalized.startsWith(`${WEB_PACKAGE}/`) && normalized !== WEB_PACKAGE)
+    (normalized.startsWith(PRODUCT_SCOPE) && !matchesPackage(normalized, WEB_PACKAGES))
     || SIBLING_PRODUCT_PACKAGES.has(normalized)
     || SIBLING_PRODUCT_PATH_PATTERN.test(normalized)
   ) {
@@ -84,12 +97,19 @@ const forbiddenDependencyReason = (dependencyName, dependencyValue) => {
   if (directReason === 'imports archived Foundation') return 'uses archived Foundation';
   if (directReason) return 'uses a sibling product dependency';
   if (typeof dependencyValue === 'string') {
+    const npmAliasTarget = extractNpmAliasTarget(dependencyValue);
+    if (npmAliasTarget) {
+      const targetReason = forbiddenSpecifierReason(npmAliasTarget);
+      if (targetReason === 'imports archived Foundation') return 'uses archived Foundation';
+      if (targetReason) return 'uses a sibling product dependency';
+    }
     for (const packageName of extractScopedProductPackages(dependencyValue)) {
       const targetReason = forbiddenSpecifierReason(packageName);
       if (targetReason === 'imports archived Foundation') return 'uses archived Foundation';
       if (targetReason) return 'uses a sibling product dependency';
     }
     const localTarget = normalizePath(dependencyValue).replace(/^(?:file|link|workspace):/, '');
+    if (FOUNDATION_PATH_PATTERN.test(localTarget)) return 'uses archived Foundation';
     if (SIBLING_PRODUCT_PATH_PATTERN.test(localTarget)) return 'uses a sibling product dependency';
   }
   return undefined;
@@ -127,6 +147,27 @@ export const validateLocalFoundationBoundary = (rootPath = process.cwd()) => {
     }
     for (const [dependencyName, dependencyValue] of Object.entries(dependencies)) {
       const reason = forbiddenDependencyReason(dependencyName, dependencyValue);
+      if (reason) {
+        violations.push(
+          `${normalizePath(relative(root, packagePath))}: ${reason} (${section}.${dependencyName})`,
+        );
+      }
+    }
+  }
+
+  for (const section of BUNDLED_DEPENDENCY_SECTIONS) {
+    const dependencies = packageJson[section];
+    if (dependencies === undefined || typeof dependencies === 'boolean') continue;
+    if (!Array.isArray(dependencies)) {
+      violations.push(`${normalizePath(relative(root, packagePath))}: ${section} must be an array or boolean`);
+      continue;
+    }
+    for (const dependencyName of dependencies) {
+      if (typeof dependencyName !== 'string') {
+        violations.push(`${normalizePath(relative(root, packagePath))}: ${section} entries must be strings`);
+        continue;
+      }
+      const reason = forbiddenDependencyReason(dependencyName, dependencyName);
       if (reason) {
         violations.push(
           `${normalizePath(relative(root, packagePath))}: ${reason} (${section}.${dependencyName})`,
