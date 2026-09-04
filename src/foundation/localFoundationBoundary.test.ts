@@ -82,4 +82,24 @@ describe('local Foundation boundary gate', () => {
     expect(result.output).toContain('package.json');
     expect(result.output).toContain('sibling product dependency');
   });
+
+  it.each([
+    ['dependencies', 'foundation-npm-alias', 'npm:@fusionstructure/foundation@1.0.0', 'archived Foundation'],
+    ['devDependencies', 'fstructure-file-alias', 'file:../fstructure', 'sibling product dependency'],
+    ['optionalDependencies', 'space3d-workspace-alias', 'workspace:@fusionstructure/space3d@*', 'sibling product dependency'],
+    ['peerDependencies', 'foundation-workspace-alias', 'workspace:@fusionstructure/foundation@*', 'archived Foundation'],
+  ])('rejects aliases in %s that target local-only products', (section, alias, target, reason) => {
+    const root = createFixture();
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'fixture-web', [section]: { [alias]: target } }, null, 2),
+    );
+    writeSource(root, 'App.tsx', 'export {};');
+
+    const result = runGate(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(reason);
+    expect(result.output).toContain(`${section}.${alias}`);
+  });
 });

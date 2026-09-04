@@ -46,6 +46,10 @@ const collectProductionSourceFiles = (directory) => {
   return files;
 };
 
+const extractScopedProductPackages = (value) => (
+  [...value.matchAll(SCOPED_PRODUCT_PACKAGE_PATTERN)].map((match) => match[0])
+);
+
 const extractModuleSpecifiers = (source) => {
   const specifiers = new Set();
   for (const pattern of SPECIFIER_PATTERNS) {
@@ -54,8 +58,8 @@ const extractModuleSpecifiers = (source) => {
       specifiers.add(match[1]);
     }
   }
-  for (const match of source.matchAll(SCOPED_PRODUCT_PACKAGE_PATTERN)) {
-    specifiers.add(match[0]);
+  for (const packageName of extractScopedProductPackages(source)) {
+    specifiers.add(packageName);
   }
   return [...specifiers];
 };
@@ -79,8 +83,14 @@ const forbiddenDependencyReason = (dependencyName, dependencyValue) => {
   const directReason = forbiddenSpecifierReason(dependencyName);
   if (directReason === 'imports archived Foundation') return 'uses archived Foundation';
   if (directReason) return 'uses a sibling product dependency';
-  if (typeof dependencyValue === 'string' && SIBLING_PRODUCT_PATH_PATTERN.test(normalizePath(dependencyValue))) {
-    return 'uses a sibling product dependency';
+  if (typeof dependencyValue === 'string') {
+    for (const packageName of extractScopedProductPackages(dependencyValue)) {
+      const targetReason = forbiddenSpecifierReason(packageName);
+      if (targetReason === 'imports archived Foundation') return 'uses archived Foundation';
+      if (targetReason) return 'uses a sibling product dependency';
+    }
+    const localTarget = normalizePath(dependencyValue).replace(/^(?:file|link|workspace):/, '');
+    if (SIBLING_PRODUCT_PATH_PATTERN.test(localTarget)) return 'uses a sibling product dependency';
   }
   return undefined;
 };
