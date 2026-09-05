@@ -22,16 +22,16 @@ Esta regla es técnica y de proceso. No significa que desaparezcan la licencia M
 
 ## Calidad mínima
 
-Antes de cerrar un cambio relevante:
+La validación por defecto debe ser proporcional al cambio y consumir el mínimo tiempo posible.
 
-- ejecutar `npm run check`;
-- leer el resultado completo;
-- indicar qué quedó verificado y qué no pudo ejecutarse;
-- actualizar la documentación si cambió el alcance, el formato de datos o una decisión de arquitectura;
-- conservar compatibilidad o escribir una migración cuando se toque información persistente;
-- no afirmar cumplimiento normativo, exactitud estructural o preparación para obra sin evidencia específica.
+- No ejecutar `npm run check`, la suite completa ni pruebas no relacionadas por rutina.
+- Para copy, estilos, layout, navegación y composición visual: usar build/typecheck y revisión visual puntual sólo cuando aporten señal útil.
+- Para enlaces, handoff, persistencia o contratos compartidos: validar únicamente el flujo tocado.
+- Ejecutar la suite completa únicamente si el usuario la pide, si se prepara una release importante o si un cambio transversal no puede aislarse de forma razonable.
+- No crear pruebas nuevas para cambios puramente visuales salvo que exista una regresión concreta que convenga fijar.
+- Indicar qué se verificó y qué no; no presentar como validado aquello que no se ejecutó.
 
-La ausencia de una prueba no es evidencia de que la función funcione.
+La ausencia de una prueba no es evidencia de que la función funcione, pero tampoco justifica ejecutar pruebas irrelevantes.
 
 ## Dirección de producto
 
@@ -49,15 +49,9 @@ Una feature nueva debe declarar qué entidad del proyecto modifica, qué validac
 
 ## Foundation local de Web
 
-- `src/foundation/` pertenece sólo a este portal Web. El código de producción de
-  esa carpeta contiene únicamente identificadores de producto y URLs públicas
-  de aplicaciones.
-- No importar `@fusionstructure/foundation` ni paquetes o rutas internas de
-  productos hermanos. La navegación entre productos usa enlaces públicos, no
-  código de 2D, 3D, unidades, álgebra lineal, modelos, workers o stores.
-- Un cambio a Foundation local requiere únicamente pruebas de Web y un PR de
-  Web. Ejecutar `npm run check` en este repositorio; no abrir ni exigir pruebas
-  o PRs de productos hermanos para ese cambio local.
+- `src/foundation/` pertenece sólo a este portal Web. El código de producción de esa carpeta contiene únicamente identificadores de producto y URLs públicas de aplicaciones.
+- No importar `@fusionstructure/foundation` ni paquetes o rutas internas de productos hermanos. La navegación entre productos usa enlaces públicos, no código de 2D, 3D, unidades, álgebra lineal, modelos, workers o stores.
+- Un cambio a Foundation local requiere únicamente la verificación mínima y focalizada de Web. No abrir ni exigir pruebas o PRs de productos hermanos para ese cambio local.
 
 ## Trabajo experimental
 
@@ -73,4 +67,4 @@ Una feature nueva debe declarar qué entidad del proyecto modifica, qué validac
 
 El usuario autorizó actualizar el repositorio en esta sesión. Para cambios posteriores, no hacer push ni abrir un Pull Request salvo que se solicite explícitamente en esa sesión.
 
-Si el cambio toca una superficie crítica, dejar una nota de decisión o una prueba reproducible. Si una puerta falla, reportar el fallo exacto y no presentarlo como éxito.
+Si el cambio toca una superficie crítica, dejar una nota de decisión o una prueba reproducible. Si una verificación falla, reportar el fallo exacto y no presentarlo como éxito.
